@@ -1,6 +1,7 @@
-from flask import Flask, render_template, request, redirect, url_for
+from flask import Flask, render_template, request, redirect, url_for, jsonify
 from collections.abc import MutableMapping
 from flask_pymongo import PyMongo
+import gridfs
 
 app = Flask(__name__)
 
