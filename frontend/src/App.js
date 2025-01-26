@@ -180,7 +180,7 @@ const App = () => {
             <>
               <img
                 src={`http://127.0.0.1:5000/floorplans/${floorPlans[currentFloor]}`}
-                alt={`Floor ${currentFloor + 1}`}
+                alt={`Floor Plan`}
                 style={{ width: "100%", maxHeight: "400px" }}
                 onError={(e) => {
                   e.target.src = "placeholder.jpg";
@@ -196,7 +196,6 @@ const App = () => {
                 >
                   ← Previous
                 </button>
-                <span>Floor {currentFloor + 1}</span>
                 <button
                   onClick={() =>
                     setCurrentFloor((prev) =>
