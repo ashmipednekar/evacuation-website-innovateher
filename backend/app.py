@@ -16,6 +16,18 @@ fs = gridfs.GridFS(mongo.db)
 
 image_dir = os.path.abspath("../images/")
 
+coordinates = {
+    "WALC": [40.42745640945242, -86.91315917419448],
+    "WTHR": [40.426572076226556, -86.91311613186498],
+    "ME": [40.42843062305387, -86.91287552883526],
+    "STEW": [40.42569297705542, -86.9128632559344],
+    "RAIL": [40.42814381169848, -86.91266152817163],
+    "POTR": [40.427417476606976, -86.91214638953542],
+    "ELLT": [40.42818286864327, -86.91507137604114],
+    "PSYC": [40.427234449585484, -86.91479352817169]
+}
+
+
 app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes
 
@@ -88,7 +100,7 @@ def upload_image():
             "maxFloor": max(floor["floorNumber"] for floor in floorImages[buildingName]),
             "coords": {
                 "type": "Point",
-                "coordinates": [-73.935242, 40.73061]  
+                "coordinates": coordinates[buildingName]
             }
         }
 
