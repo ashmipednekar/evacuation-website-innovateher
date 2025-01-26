@@ -134,11 +134,6 @@ const App = () => {
           style={{ width: 50, height: 50 }}
         />
         <h1>Fire Evacuation Hub</h1>
-        <nav>
-          <a href="#alerts">Live Alerts</a>
-          <a href="#resources">Resources</a>
-          <a href="#contact">Contact</a>
-        </nav>
       </header>
 
       <main>
@@ -216,5 +211,7 @@ const App = () => {
     </div>
   );
 };
+
+
 
 export default App;
