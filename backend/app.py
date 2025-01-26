@@ -71,6 +71,10 @@ def get_floorplans(building_id):
 # Upload Images
 @app.route("/upload-images", methods=["POST"])
 def upload_image():
+
+    if mongo.db.buildings.count_documents({}) > 0:
+        return jsonify({"message": "Database is not empty. No action taken."}), 400
+
     floorImages = {} 
     currentBuilding = os.listdir(image_dir)[0].split("_")[0]
     currentMaps = []
