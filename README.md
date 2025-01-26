@@ -34,10 +34,12 @@ pip install flask flask-cors flask-pymongo gridfs geopy.distance bson
 
 ### Frontend
 ```bash
+cd frontend
 npm start
 ```
 
 ### Backend
 ```bash
+cd backend
 python app.py
 ```
