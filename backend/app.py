@@ -4,6 +4,7 @@ from flask_pymongo import PyMongo
 import gridfs
 from bson import ObjectId
 import os
+import geopy.distance
 
 app = Flask(__name__)
 
@@ -31,21 +32,6 @@ coordinates = {
 app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes
 
-# Mock data for buildings and floor plans
-mock_buildings = [
-    {
-        "_id": "1",
-        "name": "Building A",
-        "coordinates": {"type": "Point", "coordinates": [114.169, 22.319]},
-        "floor_maps": ["floor1.png", "floor2.png", "floor3.png"],
-    },
-    {
-        "_id": "2",
-        "name": "Building B",
-        "coordinates": {"type": "Point", "coordinates": [114.170, 22.320]},
-        "floor_maps": ["floor1.png", "floor2.png"],
-    },
-]
 '''
 floorImages = {} 
 currentBuilding = os.listdir(image_dir)[0].split("_")[0]
@@ -99,32 +85,51 @@ for buildingName in floorImages.keys():
 print("Images uploaded and buildings added successfully!")
 '''
 
+@app.route('/buildings/<building_name>/floorplans', methods=['GET'])
+def get_floorplans(building_name):
+    building = mongo.db.buildings.find_one({"buildingName": building_name})
+
+    if not building:
+        return jsonify({"error": "Building not found"}), 404
+
+    floor_plans = [floor["imageId"] for floor in building["floors"]]
+    return jsonify({"floor_maps": floor_plans})
+
+
 # Get nearest buildings
 @app.route('/buildings/near', methods=['GET'])
 def get_nearest_buildings():
     user_lat = float(request.args.get('lat'))
     user_lng = float(request.args.get('lng'))
-    max_distance = int(request.args.get('max_distance', 5000))  # Mock max distance
+    user_coords = (user_lat, user_lng)
+    min_distance = float('inf')  # Start with a very high value
+    nearest_building = None
 
-    buildings = mongo.db.buildings.find()
+    buildings = mongo.db.buildings.find()  # Fetch all buildings
 
     for building in buildings:
-            building["_id"] = str(building["_id"])
-            
+        # Extract building coordinates
+        build_lng = building["coords"]["coordinates"][0]
+        build_lat = building["coords"]["coordinates"][1]
+        build_coords = (build_lat, build_lng)
 
-    # Simulate finding the nearest building (just return the first one for now)
-    nearest_building = mock_buildings[0]
-    return jsonify([nearest_building])
+        # Calculate distance
+        distance = geopy.distance.geodesic(user_coords, build_coords).km
+        if distance < min_distance:
+            min_distance = distance
+            nearest_building = building
 
-# Get floor plans
-@app.route('/buildings/<building_id>/floorplans', methods=['GET'])
-def get_floorplans(building_id):
-    # Simulate getting floor plans for the specified building
-    building = next((b for b in mock_buildings if b["_id"] == building_id), None)
-    if not building:
-        return jsonify({"error": "Building not found"}), 404
+    if nearest_building:
+        # Serialize nearest building (convert ObjectId to string)
+        nearest_building["_id"] = str(nearest_building["_id"])
+        return jsonify(nearest_building)
+    else:
+        # If no buildings are found
+        return jsonify({"error": "No nearby buildings found"}), 404
 
-    return jsonify({"floor_maps": building["floor_maps"]})
+
+
+
 
 if __name__ == '__main__':
     app.run(debug=True)

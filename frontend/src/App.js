@@ -83,7 +83,7 @@ const App = () => {
     if (selectedBuilding) {
       axios
         .get(
-          `http://127.0.0.1:5000/buildings/${selectedBuilding._id}/floorplans`
+          `http://127.0.0.1:5000/buildings/${selectedBuilding.name}/floorplans`
         )
         .then((response) => {
           setFloorPlans(response.data.floor_maps);
@@ -150,7 +150,10 @@ const App = () => {
         <section className="map-section">
           <h2>{selectedBuilding ? selectedBuilding.name : "Loading..."}</h2>
           <div id="map" style={{ height: "300px", marginTop: "20px" }}></div>
-          <button className="sos-button" onClick={() => alert("Personnel is notified and is coming.")}>
+          <button
+            className="sos-button"
+            onClick={() => alert("Personnel is notified and is coming.")}
+          >
             SOS: Disabled, Preg, Elderly
           </button>
           <button onClick={handleLocationClick}>
