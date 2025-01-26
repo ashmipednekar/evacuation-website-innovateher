@@ -15,12 +15,12 @@ const loadGoogleMapsScript = () => {
 
 const App = () => {
   const [userLocation, setUserLocation] = useState(null); // User's current location
-  const [selectedBuilding, setSelectedBuilding] = useState(null); // Selected building
-  const [nearbyBuildings, setNearbyBuildings] = useState([]); // Nearby buildings
-  const [floorPlans, setFloorPlans] = useState([]); // Floor plans for the selected building
-  const [currentFloor, setCurrentFloor] = useState(0); // Current floor number
-  const [map, setMap] = useState(null); // Google Maps instance
-  const [userMarker, setUserMarker] = useState(null); // Marker for the user's location
+  let [selectedBuilding, setSelectedBuilding] = useState(null); // Selected building
+  let [nearbyBuildings, setNearbyBuildings] = useState([]); // Nearby buildings
+  let [floorPlans, setFloorPlans] = useState([]); // Floor plans for the selected building
+  let [currentFloor, setCurrentFloor] = useState(0); // Current floor number
+  let [map, setMap] = useState(null); // Google Maps instance
+  let [userMarker, setUserMarker] = useState(null); // Marker for the user's location
 
   // Step 1: Load Google Maps script
   useEffect(() => {
