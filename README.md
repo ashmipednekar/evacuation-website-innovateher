@@ -31,13 +31,16 @@ pip install flask flask-cors flask-pymongo gridfs geopy.distance bson
   - Google Maps API key
 
 ## Running the Project
+Open up 2 different Terminal windows. Run frontend on one and backend on the other.
 
 ### Frontend
 ```bash
+cd frontend
 npm start
 ```
 
 ### Backend
 ```bash
+cd backend
 python app.py
 ```
