@@ -50,6 +50,10 @@ const App = () => {
           position: { lat: latitude, lng: longitude },
           map: mapInstance,
           title: "Your Location",
+          icon: {
+            url: "https://maps.google.com/mapfiles/ms/icons/blue-dot.png", // Custom icon URL
+            scaledSize: new window.google.maps.Size(40, 40), // Scale the icon (optional)
+          },
         });
 
         setMap(mapInstance);
@@ -69,8 +73,8 @@ const App = () => {
           params: { lat: userLocation.lat, lng: userLocation.lng },
         })
         .then((response) => {
-          setNearbyBuildings(response.data);
           setSelectedBuilding(response.data[0]); // Select the first building by default
+          setNearbyBuildings(response.data);
         })
         .catch((error) =>
           console.error("Error fetching nearby buildings:", error)
@@ -83,10 +87,15 @@ const App = () => {
     if (selectedBuilding) {
       axios
         .get(
-          `http://127.0.0.1:5000/buildings/${selectedBuilding.name}/floorplans`
+          `http://127.0.0.1:5000/buildings/${selectedBuilding.buildingName}/floorplans`
         )
         .then((response) => {
-          setFloorPlans(response.data.floor_maps);
+          const sortedFloorPlans = response.data.floor_maps.sort((a, b) => {
+            // Extract the floor numbers from the image IDs if needed,
+            // otherwise assume the API has already sorted them.
+            return a.floorNumber - b.floorNumber;
+          });
+          setFloorPlans(sortedFloorPlans);
           setCurrentFloor(0); // Reset to the first floor
         })
         .catch((error) => console.error("Error fetching floor plans:", error));
@@ -116,20 +125,6 @@ const App = () => {
     );
   };
 
-  // Render map with the selected building's marker
-  useEffect(() => {
-    if (map && selectedBuilding) {
-      new window.google.maps.Marker({
-        position: {
-          lat: selectedBuilding.coordinates.coordinates[1],
-          lng: selectedBuilding.coordinates.coordinates[0],
-        },
-        map,
-        title: selectedBuilding.name,
-      });
-    }
-  }, [map, selectedBuilding]);
-
   return (
     <div className="app">
       <header className="header">
@@ -148,7 +143,9 @@ const App = () => {
 
       <main>
         <section className="map-section">
-          <h2>{selectedBuilding ? selectedBuilding.name : "Loading..."}</h2>
+          <h2>
+            {selectedBuilding ? selectedBuilding.buildingName : "Loading..."}
+          </h2>
           <div id="map" style={{ height: "300px", marginTop: "20px" }}></div>
           <button
             className="sos-button"
@@ -169,7 +166,7 @@ const App = () => {
             >
               {nearbyBuildings.map((building) => (
                 <option key={building._id} value={building._id}>
-                  {building.name}
+                  {building.buildingName}
                 </option>
               ))}
             </select>
@@ -183,8 +180,12 @@ const App = () => {
             <>
               <img
                 src={`http://127.0.0.1:5000/floorplans/${floorPlans[currentFloor]}`}
-                alt={`Floor ${currentFloor + 1}`}
+                alt={`Floor Plan`}
                 style={{ width: "100%", maxHeight: "400px" }}
+                onError={(e) => {
+                  e.target.src = "placeholder.jpg";
+                  e.target.alt = "Image not available";
+                }}
               />
               <div className="floor-navigation">
                 <button
@@ -195,7 +196,6 @@ const App = () => {
                 >
                   ← Previous
                 </button>
-                <span>Floor {currentFloor + 1}</span>
                 <button
                   onClick={() =>
                     setCurrentFloor((prev) =>
