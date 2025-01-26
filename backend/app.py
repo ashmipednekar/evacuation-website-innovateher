@@ -8,11 +8,11 @@ import os
 app = Flask(__name__)
 
 # MongoDB Configuration
-#my pass: 59Dk0F56
-app.config["MONGO_URI"] = "mongodb+srv://ashmipednekar:59Dk0F56@gumpack-cluster.u6mjj.mongodb.net/?retryWrites=true&w=majority&appName=gumpack-cluster"
-mongo = PyMongo(app)
+mongo = PyMongo(app, uri="mongodb+srv://ashmipednekar:59Dk0F56@gumpack-cluster.u6mjj.mongodb.net/buildings?retryWrites=true&w=majority&appName=gumpack-cluster")
 
-fs = gridfs.GridFS(mongo.db)
+
+# Use the actual database for GridFS
+fs = gridfs.GridFS(mongo.cx["buildings"])
 
 image_dir = os.path.abspath("../images/")
 
@@ -47,6 +47,59 @@ mock_buildings = [
     },
 ]
 
+# Set up database if not already populated
+
+if mongo.db.buildings.count_documents({}) > 0:
+    print("Database is not empty. No action taken.")
+
+floorImages = {} 
+currentBuilding = os.listdir(image_dir)[0].split("_")[0]
+currentMaps = []
+
+for file in os.listdir(image_dir):
+    file_path = os.path.join(image_dir, file)
+    if len(file.split("_")) < 2:
+        continue
+    floor_number_str = file.split("_")[1].split(".")[0]
+    try:
+        floor_number = int(floor_number_str)  # Safely convert to integer
+    except ValueError:
+        continue  # Skip files that don't match the expected format
+    with open(file_path, "rb") as image_file:
+        image_id = fs.put(image_file, filename=file)
+        if file.split("_")[0] != currentBuilding:
+            floorImages[currentBuilding] = currentMaps
+            currentMaps = []
+            currentBuilding = file.split("_")[0]
+
+        currentMaps.append({
+            "floorNumber": floor_number,
+            "imageId": str(image_id)  # Store imageId as a string
+        })
+
+
+
+for buildingName in floorImages.keys(): 
+    # Building document
+    building = {
+        "buildingName": f"{buildingName}",
+        "floors": floorImages[buildingName], # object containing floorNum and imageId
+        "minFloor": min(floor["floorNumber"] for floor in floorImages[buildingName]),
+        "maxFloor": max(floor["floorNumber"] for floor in floorImages[buildingName]),
+        "coords": {
+            "type": "Point",
+            "coordinates": coordinates[buildingName]
+        }
+    }
+
+    # Insert the document into the `buildings` collection
+
+    result = mongo.db.buildings.insert_one(building)
+    print(f"Building added with ID: {result.inserted_id}")
+
+print("Images uploaded and buildings added successfully!")
+
+
 # Get nearest buildings
 @app.route('/buildings/near', methods=['GET'])
 def get_nearest_buildings():
@@ -67,53 +120,6 @@ def get_floorplans(building_id):
         return jsonify({"error": "Building not found"}), 404
 
     return jsonify({"floor_maps": building["floor_maps"]})
-
-# Upload Images
-@app.route("/upload-images", methods=["POST"])
-def upload_image():
-
-    if mongo.db.buildings.count_documents({}) > 0:
-        return jsonify({"message": "Database is not empty. No action taken."}), 400
-
-    floorImages = {} 
-    currentBuilding = os.listdir(image_dir)[0].split("_")[0]
-    currentMaps = []
-    
-    for file in os.listdir(image_dir):
-        file_path = os.path.join(image_dir, file)
-        with open(file_path, "rb") as image_file:
-            image_id = fs.put(image_file, filename=file)
-
-            if (file.split("_")[0] != currentBuilding):
-                floorImages[currentBuilding] = currentMaps
-                currentMaps = []
-                currentBuilding = file.split("_")[0]
-
-
-            currentMaps.append({
-                "floorNumber": int(file.split("_")[1]),
-                "imageId": str(image_id)  # Store imageId as a string
-                })
-    
-    for buildingName in floorImages.keys(): 
-        # Building document
-        building = {
-            "buildingName": f"{buildingName}",
-            "floors": floorImages[buildingName], # object containing floorNum and imageId
-            "minFloor": min(floor["floorNumber"] for floor in floorImages[buildingName]),
-            "maxFloor": max(floor["floorNumber"] for floor in floorImages[buildingName]),
-            "coords": {
-                "type": "Point",
-                "coordinates": coordinates[buildingName]
-            }
-        }
-
-        # Insert the document into the `buildings` collection
-
-        result = mongo.db.buildings.insert_one(building)
-        print(f"Building added with ID: {result.inserted_id}")
-
-    return jsonify({"message": "Images uploaded and buildings added successfully!"}), 200
 
 if __name__ == '__main__':
     app.run(debug=True)
