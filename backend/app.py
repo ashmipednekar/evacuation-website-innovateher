@@ -95,6 +95,16 @@ def get_floorplans(building_name):
     floor_plans = [floor["imageId"] for floor in building["floors"]]
     return jsonify({"floor_maps": floor_plans})
 
+@app.route('/floorplans/<image_id>', methods=['GET'])
+def get_floorplan_image(image_id):
+    try:
+        # Fetch the image from GridFS using the image_id
+        image_data = fs.get(ObjectId(image_id))
+        # Return the image as a response
+        return image_data.read(), 200, {'Content-Type': 'image/jpeg'}  # Assuming images are JPEG
+    except Exception as e:
+        # Handle errors (e.g., invalid ObjectId or missing image)
+        return jsonify({"error": "Image not found"}), 404
 
 # Get nearest buildings
 @app.route('/buildings/near', methods=['GET'])
