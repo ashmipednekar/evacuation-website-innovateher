@@ -92,8 +92,11 @@ def get_floorplans(building_name):
     if not building:
         return jsonify({"error": "Building not found"}), 404
 
-    floor_plans = [floor["imageId"] for floor in building["floors"]]
-    return jsonify({"floor_maps": floor_plans})
+    # Sort the floors by floorNumber
+    floor_plans = sorted(building["floors"], key=lambda floor: floor["floorNumber"])
+
+    # Return only the image IDs
+    return jsonify({"floor_maps": [floor["imageId"] for floor in floor_plans]})
 
 @app.route('/floorplans/<image_id>', methods=['GET'])
 def get_floorplan_image(image_id):
@@ -107,36 +110,79 @@ def get_floorplan_image(image_id):
         return jsonify({"error": "Image not found"}), 404
 
 # Get nearest buildings
+# @app.route('/buildings/near', methods=['GET'])
+# def get_nearest_buildings():
+#     user_lat = float(request.args.get('lat'))
+#     user_lng = float(request.args.get('lng'))
+#     user_coords = (user_lat, user_lng)
+#     min_distance = float('inf')  # Start with a very high value
+#     nearest_building = None
+
+#     buildings = mongo.db.buildings.find()  # Fetch all buildings
+
+#     for building in buildings:
+#         # Extract building coordinates
+#         build_lng = building["coords"]["coordinates"][0]
+#         build_lat = building["coords"]["coordinates"][1]
+#         build_coords = (build_lat, build_lng)
+
+#         # Calculate distance
+#         distance = geopy.distance.geodesic(user_coords, build_coords).km
+#         if distance < min_distance:
+#             min_distance = distance
+#             nearest_building = building
+
+#     if nearest_building:
+#         # Serialize nearest building (convert ObjectId to string)
+#         nearest_building["_id"] = str(nearest_building["_id"])
+#         return jsonify(nearest_building)
+#     else:
+#         # If no buildings are found
+#         return jsonify({"error": "No nearby buildings found"}), 404
+
 @app.route('/buildings/near', methods=['GET'])
-def get_nearest_buildings():
-    user_lat = float(request.args.get('lat'))
-    user_lng = float(request.args.get('lng'))
-    user_coords = (user_lat, user_lng)
-    min_distance = float('inf')  # Start with a very high value
-    nearest_building = None
+def get_all_buildings():
+    try:
+        user_lat = request.args.get('lat', type=float)
+        user_lng = request.args.get('lng', type=float)
 
-    buildings = mongo.db.buildings.find()  # Fetch all buildings
+        if user_lat is None or user_lng is None:
+            return jsonify({"error": "User location (lat, lng) is required"}), 400
 
-    for building in buildings:
-        # Extract building coordinates
-        build_lng = building["coords"]["coordinates"][0]
-        build_lat = building["coords"]["coordinates"][1]
-        build_coords = (build_lat, build_lng)
+        user_coords = (user_lat, user_lng)
 
-        # Calculate distance
-        distance = geopy.distance.geodesic(user_coords, build_coords).km
-        if distance < min_distance:
-            min_distance = distance
-            nearest_building = building
+        # Fetch all buildings
+        buildings = mongo.db.buildings.find()
 
-    if nearest_building:
-        # Serialize nearest building (convert ObjectId to string)
-        nearest_building["_id"] = str(nearest_building["_id"])
-        return jsonify(nearest_building)
-    else:
-        # If no buildings are found
-        return jsonify({"error": "No nearby buildings found"}), 404
+        # Serialize the buildings to a list of dictionaries
+        all_buildings = []
+        nearest_building = None
+        min_distance = float('inf')  # Start with a very large distance
 
+        for building in buildings:
+            building['_id'] = str(building['_id'])  # Convert ObjectId to string
+            all_buildings.append(building)
+
+            # Calculate the distance to the building
+            building_coords = (
+                building['coords']['coordinates'][1],  # Latitude
+                building['coords']['coordinates'][0],  # Longitude
+            )
+            distance = geopy.distance.geodesic(user_coords, building_coords).km
+
+            if distance < min_distance:
+                min_distance = distance
+                nearest_building = building
+
+        if nearest_building:
+            # Remove the nearest building from the list and place it at the front
+            all_buildings = [nearest_building] + [
+                building for building in all_buildings if building != nearest_building
+            ]
+
+        return jsonify(all_buildings), 200
+    except Exception as e:
+        return jsonify({"error": "An error occurred while fetching buildings", "details": str(e)}), 500
 
 
 
