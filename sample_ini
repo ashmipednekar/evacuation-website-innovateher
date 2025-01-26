@@ -1,5 +1,3 @@
-
-
 [PROD]
 DB_URI = mongodb+srv://<username>:<password>@<your-atlas-cluster-address>/sample_mflix
 
