@@ -39,11 +39,15 @@ currentMaps = []
 
 for file in os.listdir(image_dir):
     file_path = os.path.join(image_dir, file)
+    
+    # Ensure the filename has the expected format with an underscore
     if len(file.split("_")) < 2:
         continue
+    
+    # Extract the floor number string, allowing for negative values
     floor_number_str = file.split("_")[1].split(".")[0]
     try:
-        floor_number = int(floor_number_str)  # Safely convert to integer
+        floor_number = int(floor_number_str)  # Convert to integer, supports negatives
     except ValueError:
         continue  # Skip files that don't match the expected format
     
@@ -53,25 +57,40 @@ for file in os.listdir(image_dir):
         # Check if building has changed
         if file.split("_")[0] != currentBuilding:
             # Store the previous building's floor images
-            floorImages[currentBuilding] = currentMaps
+            if currentBuilding in floorImages:
+                floorImages[currentBuilding].extend(currentMaps)
+            else:
+                floorImages[currentBuilding] = currentMaps
+
+            # Reset for the next building
             currentMaps = []
             currentBuilding = file.split("_")[0]
 
+        # Append the floor data
         currentMaps.append({
             "floorNumber": floor_number,
             "imageId": str(image_id)  # Store imageId as a string
         })
 
 # Add the last building's floor images
-floorImages[currentBuilding] = currentMaps
+if currentBuilding in floorImages:
+    floorImages[currentBuilding].extend(currentMaps)
+else:
+    floorImages[currentBuilding] = currentMaps
 
-for buildingName in floorImages.keys(): 
+# Debugging: Verify floor images
+print("Floor Images:", floorImages)
+
+for buildingName, floors in floorImages.items(): 
+    # Ensure min and max calculations are based on all valid floor numbers
+    floor_numbers = [floor["floorNumber"] for floor in floors]
+
     # Building document
     building = {
         "buildingName": f"{buildingName}",
-        "floors": floorImages[buildingName],
-        "minFloor": min(floor["floorNumber"] for floor in floorImages[buildingName]),
-        "maxFloor": max(floor["floorNumber"] for floor in floorImages[buildingName]),
+        "floors": floors,
+        "minFloor": min(floor_numbers),  # Correctly calculate min floor
+        "maxFloor": max(floor_numbers),  # Correctly calculate max floor
         "coords": {
             "type": "Point",
             "coordinates": coordinates[buildingName]
