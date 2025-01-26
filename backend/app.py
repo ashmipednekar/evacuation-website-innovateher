@@ -46,12 +46,7 @@ mock_buildings = [
         "floor_maps": ["floor1.png", "floor2.png"],
     },
 ]
-
-# Set up database if not already populated
-
-if mongo.db.buildings.count_documents({}) > 0:
-    print("Database is not empty. No action taken.")
-
+'''
 floorImages = {} 
 currentBuilding = os.listdir(image_dir)[0].split("_")[0]
 currentMaps = []
@@ -65,9 +60,13 @@ for file in os.listdir(image_dir):
         floor_number = int(floor_number_str)  # Safely convert to integer
     except ValueError:
         continue  # Skip files that don't match the expected format
+    
     with open(file_path, "rb") as image_file:
         image_id = fs.put(image_file, filename=file)
+        
+        # Check if building has changed
         if file.split("_")[0] != currentBuilding:
+            # Store the previous building's floor images
             floorImages[currentBuilding] = currentMaps
             currentMaps = []
             currentBuilding = file.split("_")[0]
@@ -77,13 +76,14 @@ for file in os.listdir(image_dir):
             "imageId": str(image_id)  # Store imageId as a string
         })
 
-
+# Add the last building's floor images
+floorImages[currentBuilding] = currentMaps
 
 for buildingName in floorImages.keys(): 
     # Building document
     building = {
         "buildingName": f"{buildingName}",
-        "floors": floorImages[buildingName], # object containing floorNum and imageId
+        "floors": floorImages[buildingName],
         "minFloor": min(floor["floorNumber"] for floor in floorImages[buildingName]),
         "maxFloor": max(floor["floorNumber"] for floor in floorImages[buildingName]),
         "coords": {
@@ -93,12 +93,11 @@ for buildingName in floorImages.keys():
     }
 
     # Insert the document into the `buildings` collection
-
     result = mongo.db.buildings.insert_one(building)
     print(f"Building added with ID: {result.inserted_id}")
 
 print("Images uploaded and buildings added successfully!")
-
+'''
 
 # Get nearest buildings
 @app.route('/buildings/near', methods=['GET'])
@@ -106,6 +105,12 @@ def get_nearest_buildings():
     user_lat = float(request.args.get('lat'))
     user_lng = float(request.args.get('lng'))
     max_distance = int(request.args.get('max_distance', 5000))  # Mock max distance
+
+    buildings = mongo.db.buildings.find()
+
+    for building in buildings:
+            building["_id"] = str(building["_id"])
+            
 
     # Simulate finding the nearest building (just return the first one for now)
     nearest_building = mock_buildings[0]
